@@ -7,7 +7,6 @@ import generatedRefreshToken from "../utils/generatedRefreshToken.js";
 import uploadImageCloudinary from "../utils/uploadImageCloudinary.js";
 import generateOtp from "../utils/generateOtp.js";
 import forgotPasswordTemplate from "../utils/forgotPasswordTemplate.js";
-import { FcSelfServiceKiosk } from "react-icons/fc";
 import jwt from 'jsonwebtoken'
 
 export async function resgisterUserController(request, response){
