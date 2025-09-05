@@ -15,17 +15,21 @@ const Footer = () => {
           <a href="">
             <FaFacebook />
           </a>
-          <a href="">
-            <FaInstagram />
+          <a href="https://www.instagram.com/elusfood?igsh=MXVocXVpM2hyYjUzZw%3D%3D&utm_source=qr">
+            <FaInstagram className="text-red-500" />
           </a>
           <a href="">
             <FaWhatsapp />
           </a>
-        </div>        
+        </div>
       </div>
-      <div className='fixed bottom-25 left-80 right-0 rounded-2xl lg:bottom-25 lg:left-300'>
-        <a href="https://wa.me/+447311145412" target='blank'>
-          <img className='lg:w-10 lg:h-10 w-10 h-10 rounded-full' src={whatsapp} alt="" />
+      <div className="fixed bottom-25 left-80 right-0 rounded-2xl lg:bottom-25 lg:left-300">
+        <a href="https://wa.me/+447311145412" target="blank">
+          <img
+            className="lg:w-10 lg:h-10 w-10 h-10 rounded-full"
+            src={whatsapp}
+            alt=""
+          />
         </a>
       </div>
     </footer>
