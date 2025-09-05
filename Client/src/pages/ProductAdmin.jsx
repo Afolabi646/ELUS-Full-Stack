@@ -4,76 +4,75 @@ import AxiosToastError from "../utils/AxiosToastError";
 import Axios from "../utils/Axios";
 import Loading from "../components/Loading";
 import ProductCardAdmin from "../components/ProductCardAdmin";
-import {  IoSearchOutline  } from 'react-icons/io5'
-
+import { IoSearchOutline } from "react-icons/io5";
+import EditProductAdmin from "../components/EditProductAdmin";
 
 const ProductAdmin = () => {
   const [productData, setProductData] = useState([]);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false)
-  const [totalPageCount, setTotalPageCount] = useState(1)
-  const [search, setSearch] =  useState("")
+  const [loading, setLoading] = useState(false);
+  const [totalPageCount, setTotalPageCount] = useState(1);
+  const [search, setSearch] = useState("");
+  const [editProduct, setEditProduct] = useState(null);
 
   const fetchProductData = async () => {
     try {
-        setLoading(true)
+      setLoading(true);
       const response = await Axios({
         ...SummaryApi.getProduct,
-        data: {
-          page: page,
-          limit : 12,
-          search : search
-        },
+        data: { page: page, limit: 12, search: search },
       });
-
       const { data: responseData } = response;
-
-
       if (responseData.success) {
         setProductData(responseData.data);
-         setTotalPageCount(responseData.totalPages)
+        setTotalPageCount(responseData.totalPages);
       }
     } catch (error) {
       AxiosToastError(error);
     } finally {
-        setLoading(false)
+      setLoading(false);
     }
   };
-
 
   useEffect(() => {
     fetchProductData();
   }, [page]);
 
- const handleNext = () => {
-   if (page < totalPageCount) {
-     setPage((prev) => prev + 1);
-   }
- };
+  const handleNext = () => {
+    if (page < totalPageCount) {
+      setPage((prev) => prev + 1);
+    }
+  };
 
+  const handlePrevious = () => {
+    if (page > 1) {
+      setPage((prev) => prev - 1);
+    }
+  };
 
-    const handlePrevious = () => {
-      if (page > 1) {
-        setPage(preve => preve - 1);
-      }
+  const handleOnChange = (e) => {
+    const { value } = e.target;
+    setSearch(value);
+    setPage(1);
+  };
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchProductData();
+    }, 300);
+    return () => {
+      clearTimeout(timeoutId);
     };
+  }, [search]);
 
-    const handleOnChange = (e)=>{
-        const { value } = e.target
-        setSearch(value)
-        setPage(1)
-     }
-     
-    useEffect(() => {
-      const timeoutId = setTimeout(() => {
-        fetchProductData();
-      }, 300);
+  const handleEditProduct = (product) => {
+    setEditProduct(product);
+  };
 
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    }, [search]);
-
+  const handleCloseEdit = () => {
+    setEditProduct(null);
+    fetchProductData(); // refetch data after editing
+  };
 
   return (
     <section>
@@ -83,7 +82,7 @@ const ProductAdmin = () => {
           <IoSearchOutline size={25} />
           <input
             type="text"
-            placeholder="Seach products here..."
+            placeholder="Search products here..."
             className="h-full w-full outline-none bg-transparent"
             value={search}
             onChange={handleOnChange}
@@ -91,16 +90,21 @@ const ProductAdmin = () => {
         </div>
       </div>
       {loading && <Loading />}
-
       <div className="p-4 bg-blue-50">
         <div className=" min-h-[55vh]">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {productData.map((p, index) => {
-              return <ProductCardAdmin data={p}  />;
+              return (
+                <ProductCardAdmin
+                  key={index}
+                  data={p}
+                  onEdit={() => handleEditProduct(p)}
+                  fetchProductData={fetchProductData}
+                />
+              );
             })}
           </div>
         </div>
-
         <div className="flex justify-between my-4">
           <button
             onClick={handlePrevious}
@@ -119,8 +123,9 @@ const ProductAdmin = () => {
           </button>
         </div>
       </div>
-
-      
+      {editProduct && (
+        <EditProductAdmin data={editProduct} close={handleCloseEdit} />
+      )}
     </section>
   );
 };

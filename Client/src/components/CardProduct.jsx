@@ -18,7 +18,7 @@ const CardProduct = ({data}) => {
       <div className="min-h-20 w-full max-h-24 lg:max-h-32 rounded overflow-hidden">
         <img
           src={data.image[0]}
-          className="w-full h-full object-scale-down scale"
+          className="w-25 h-25 object-scale-down scale overflow-hidden"
         />
       </div>
       <div className="rounded text-xs w-fit p-[1px] px-2 text-green-600 bg-green-50">

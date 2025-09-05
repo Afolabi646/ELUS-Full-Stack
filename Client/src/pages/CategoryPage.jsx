@@ -9,6 +9,7 @@ import ConfirmBox from '../components/ConfirmBox';
 import { IoTerminal } from 'react-icons/io5';
 import AxiosToastError from '../utils/AxiosToastError';
 import { useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 
 const CategoryPage = () => {
     const [openUploadCategory, setOpenUploadCategory] = useState(false)
@@ -53,6 +54,9 @@ const CategoryPage = () => {
     }, [])
 
     const handleDeleteCategory = async ()=>{
+      console.log("Delete category called");
+      console.log("Delete category ID:", deleteCategory._id);
+      console.log("Delete category object:", deleteCategory);
 try {
     const response = await Axios({
         ...SummaryApi.deleteCategory,
@@ -116,7 +120,7 @@ try {
                 <button
                   onClick={() => {
                     setOpenConfirmBoxDelete(true);
-                    setDeleteCategory(category);
+                    setDeleteCategory({ _id: category._id });
                   }}
                   className="flex-1 bg-red-100 hover:bg-red-200 text-red-600 font-medium py-1 rounded"
                 >
