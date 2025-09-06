@@ -1,6 +1,4 @@
-import React, { useEffect } from "react";
-
-import { useState } from "react";
+import React, { useState } from "react";
 import EditProductAdmin from "./EditProductAdmin";
 import ConfirmBox from "./ConfirmBox";
 import { IoClose } from "react-icons/io5";
@@ -10,61 +8,61 @@ import AxiosToastError from "../utils/AxiosToastError";
 import toast from "react-hot-toast";
 
 const ProductCardAdmin = ({ data, onEdit, fetchProductData }) => {
-  const [editOpen, setEditOpen] = useState(false)
+  const { image, name, unit, _id } = data;
+  const [editOpen, setEditOpen] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
 
-  const [openDelete, setOpenDelete] = useState(false)
+  const handleDeleteCancel = () => {
+    setOpenDelete(false);
+  };
 
-  const handleDeleteCancel = ()=>{
-    setOpenDelete(false)
-  }
-
-  const handleDelete = async()=>{
-      try {
-          const response = await Axios({
-            ...SummaryApi.deleteProduct,
-            data : {
-              _id : data._id
-            }
-          })
-
-          const { data : responseData } = response
-
-          if(responseData.success){
-            toast.success(responseData.message)
-            if(fetchProductData){
-              fetchProductData()
-            }
-            setOpenDelete(false)
-          }
-      } catch (error) {
-        AxiosToastError(error)
+  const handleDelete = async () => {
+    try {
+      const response = await Axios({
+        ...SummaryApi.deleteProduct,
+        data: { _id },
+      });
+      const { data: responseData } = response;
+      if (responseData.success) {
+        toast.success(responseData.message);
+        if (fetchProductData) {
+          fetchProductData();
+        }
+        setOpenDelete(false);
       }
-  }
+    } catch (error) {
+      AxiosToastError(error);
+    }
+  };
 
   return (
-    <div className="w-36 h-48 p-4 rounded bg-white">
-      <div>
+    <div className="w-36 h-64 p-4 rounded bg-white flex flex-col">
+      <div className="h-32">
         <img
-          src={data.image[0]}
-          alt={data.name}
+          src={image[0]}
+          alt={name}
           className="w-full h-full object-scale-down"
         />
       </div>
-      <p className="text-ellipsis line-clamp-2 font-medium">{data.unit}</p>
-      <p className="text-slate-400">{data.name}</p>
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={onEdit}
-          className="border px-1 py-1 text-sm border-green-600 bg-green-100 text-green-800 hover:bg-green-200 rounded"
-        >
-          Edit
-        </button>
-        <button
-          onClick={() => setOpenDelete(true)}
-          className="border px-1 py-1 text-sm border-red-600 bg-red-100 text-red-800 hover:bg-red-200 rounded"
-        >
-          Delete
-        </button>
+      <div className="flex-1 flex flex-col justify-between">
+        <div>
+          <p className="text-ellipsis line-clamp-2 font-medium">{unit}</p>
+          <p className="text-slate-400">{name}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <button
+            onClick={onEdit}
+            className="border px-1 py-1 text-sm border-green-600 bg-green-100 text-green-800 hover:bg-green-200 rounded"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => setOpenDelete(true)}
+            className="border px-1 py-1 text-sm border-red-600 bg-red-100 text-red-800 hover:bg-red-200 rounded"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {openDelete && (

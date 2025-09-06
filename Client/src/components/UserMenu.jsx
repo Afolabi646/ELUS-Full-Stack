@@ -69,7 +69,7 @@ const UserMenu = ({ close }) => {
             Category
           </Link>
         )}
-        {isAdmin(user.role) && (
+        {/* {isAdmin(user.role) && (
           <Link
             onClick={handleClose}
             to={"/dashboard/subcategory"}
@@ -77,7 +77,7 @@ const UserMenu = ({ close }) => {
           >
             Sub Category
           </Link>
-        )}
+        )} */}
         {isAdmin(user.role) && (
           <Link
             onClick={handleClose}
