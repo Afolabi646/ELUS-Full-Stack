@@ -30,22 +30,30 @@ const GlobalProvider = ({ children }) => {
     }
   };
 
-  const updateCartItem = async (id, qty, action) => {
-    try {
-      const response = await Axios({ ...SummaryApi.updateCartItemQty, data: { _id: id, qty: qty } });
-      const { data: responseData } = response;
-      if (responseData.success) {
-        if (action === "decrease") {
-          toast.success("Quantity decreased");
-        } else {
-          toast.success(responseData.message);
-        }
-        fetchCartItem();
+const updateCartItem = async (id, qty, action, unit = null) => {
+  try {
+    const response = await Axios({
+      ...SummaryApi.updateCartItemQty,
+      data: {
+        _id: id,
+        qty: qty,
+        unit: unit,
+      },
+    });
+    const { data: responseData } = response;
+    if (responseData.success) {
+      if (action === "decrease") {
+        toast.success("Quantity decreased");
+      } else {
+        toast.success(responseData.message);
       }
-    } catch (error) {
-      AxiosToastError(error);
+      fetchCartItem();
     }
-  };
+  } catch (error) {
+    AxiosToastError(error);
+  }
+};
+
 
   const deleteCartItem = async (cartId) => {
     try {

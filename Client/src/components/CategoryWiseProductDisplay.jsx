@@ -88,6 +88,7 @@ const CategoryWiseProductDisplay = ({id,name}) => {
             })}
 
           {data.map((p, index) => {
+            console.log("display",p);
             return (
               <Link
                 to={`/product/${p._id}`}

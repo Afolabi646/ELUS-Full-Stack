@@ -124,7 +124,7 @@ const ProductAdmin = () => {
         </div>
       </div>
       {editProduct && (
-        <EditProductAdmin data={editProduct} close={handleCloseEdit} />
+        <EditProductAdmin productData={editProduct} close={handleCloseEdit} />
       )}
     </section>
   );

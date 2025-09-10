@@ -1,32 +1,73 @@
-import React from 'react'
-import { IoClose } from 'react-icons/io5'
-import { Link, useNavigate } from 'react-router-dom';
-import { DisplayPriceInPounds } from '../utils/DisplayPriceInPounds';
-import { useGlobalContext } from '../provider/GlobalProvider';
-import { FaCaretRight } from 'react-icons/fa6';
-import { useSelector } from 'react-redux';
-import AddToCartButton from './AddToCartButton';
-import emptyCart from '../assets/emptyCart.jpeg'
-import toast from 'react-hot-toast';
+import React, { useEffect, useState } from "react"; 
+import { IoClose } from "react-icons/io5"; 
+import { Link, useNavigate } from "react-router-dom"; 
+import { DisplayPriceInPounds } from "../utils/DisplayPriceInPounds"; 
+import { useGlobalContext } from "../provider/GlobalProvider"; 
+import { FaCaretRight } from "react-icons/fa6"; 
+import { useSelector } from "react-redux"; 
+import AddToCartButton from "./AddToCartButton"; 
+import emptyCart from "../assets/emptyCart.jpeg"; 
+import toast from "react-hot-toast"; 
 
+const DisplayCartItem = ({ close }) => { 
+  const cartItem = useSelector((state) => state.cartItem.cart); 
+  const user = useSelector((state) => state?.user); 
+  const navigate = useNavigate(); 
+  const [selectedUnit, setSelectedUnit] = useState({}); 
 
-const DisplayCartItem = ({close}) => {
-    const { totalPrice, totalQty } = useGlobalContext();
-    const cartItem = useSelector(state => state.cartItem.cart)
-    const grandTotal = totalPrice + 7.99;
-    const user = useSelector(state => state.user)
-    const navigate = useNavigate()
+  useEffect(() => { 
+    const storedSelectedUnits = JSON.parse(localStorage.getItem("selectedUnits")) || {}; 
+    if (cartItem.length > 0) { 
+      setSelectedUnit( 
+        cartItem.reduce( 
+          (acc, item) => ({ 
+            ...acc, 
+            [item._id]: storedSelectedUnits[item._id] || item.unit || item.productId.units[0], 
+          }), 
+          {} 
+        ) 
+      ); 
+    } 
+  }, [cartItem]); 
 
-    const redirectToCheckoutPage = ()=>{
-        if(user?._id){
-          navigate("/checkout")
-          if(close){
-            close()
-          }
-          return
-        }
-        toast("please login")
-    }
+  useEffect(() => { 
+    localStorage.setItem("selectedUnits", JSON.stringify(selectedUnit)); 
+  }, [selectedUnit]); 
+
+  const totalPrice = cartItem.reduce((acc, item) => { 
+    return ( 
+      acc + (selectedUnit[item._id]?.price || item.unit.price) * item.quantity 
+    ); 
+  }, 0); 
+
+  const totalQty = cartItem.reduce((acc, item) => acc + item.quantity, 0); 
+
+  const grandTotal = totalPrice + 7.99; 
+
+  const redirectToCheckoutPage = () => { 
+    if (user?._id) { 
+      navigate("/checkout"); 
+      if (close) { 
+        close(); 
+      } 
+      return; 
+    } 
+    toast("please login"); 
+  }; 
+
+  const handleUnitChange = (itemId, unit) => { 
+    setSelectedUnit((prevSelectedUnit) => ({ 
+      ...prevSelectedUnit, 
+      [itemId]: unit, 
+    })); 
+    const cartItemDetails = cartItem.find((item) => item._id === itemId); 
+    updateCartItem( 
+      cartItemDetails?._id, 
+      cartItemDetails.quantity, 
+      "update", 
+      unit 
+    ); 
+  }; 
 
   return (
     <section className="bg-neutral-900/70 fixed top-0 bottom-0 right-0 left-0 z-50">
@@ -40,45 +81,63 @@ const DisplayCartItem = ({close}) => {
             <IoClose size={25} />
           </button>
         </div>
-
         <div className="min-h-[75vh] lg:min-h-[80vh] h-full max-h-[calc(100vh-150px)] bg-blue-50">
-          {/**Display Items */}
           {cartItem[0] ? (
             <>
               <div className="mb-4"></div>
               <div className="bg-white rounded-lg p-4 grid gap-5 overflow-auto max-h-[calc(100vh-300px)]">
-                {cartItem[0] &&
-                  cartItem.map((item, index) => {
-                    return (
-                      <div
-                        key={item?._id + "cartItemDisplay"}
-                        className="flex w-full gap-4"
-                      >
-                        <div className="w-16 h-16 min-h-16 min-w-16 bg-red-500 border rounded">
-                          <img
-                            src={item?.productId?.image[0]}
-                            className="object-scale-down"
-                          />
-                        </div>
-                        <div className="w-full max-w-sm text-xs">
-                          <p className="text-xs text-ellipsis line-clamp-2">
-                            {item.productId?.name}
-                          </p>
-                          <p className="text-neutral-400">
-                            {item?.productId?.unit}
-                          </p>
-                          <p className="font-semibold">
-                            {DisplayPriceInPounds(item.productId.price)}
-                          </p>
-                        </div>
-                        <div>
-                          <AddToCartButton data={item?.productId} />
-                        </div>
+                {cartItem.map((item, index) => (
+                  <div
+                    key={item?._id + "cartItemDisplay"}
+                    className="flex w-full gap-4 justify-between"
+                  >
+                    <div className="flex gap-4">
+                      <div className="w-16 h-16 min-h-16 min-w-16 bg-red-500 border rounded">
+                        <img
+                          src={item?.productId?.image[0]}
+                          className="object-scale-down"
+                        />
                       </div>
-                    );
-                  })}
+                      <div className="w-full max-w-sm text-xs">
+                        <p className="text-xs text-ellipsis line-clamp-2">
+                          {item.productId?.name}
+                        </p>
+                        {item.productId.units.length > 1 ? (
+                          <select
+                            value={
+                              selectedUnit[item._id]?.name ||
+                              item.productId.units[0].name
+                            }
+                            onChange={(e) => {
+                              const selectedUnit = item.productId.units.find(
+                                (unit) => unit.name === e.target.value
+                              );
+                              handleUnitChange(item._id, selectedUnit);
+                            }}
+                          >
+                            {item.productId.units.map((unit) => (
+                              <option key={unit._id} value={unit.name}>
+                                {unit.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p>Unit: {item.productId.units[0].name}</p>
+                        )}
+                        <p className="font-semibold">
+                          {DisplayPriceInPounds(
+                            selectedUnit[item._id]?.price * item.quantity ||
+                              item.unit.price * item.quantity
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end items-center">
+                      <AddToCartButton data={item?.productId} />
+                    </div>
+                  </div>
+                ))}
               </div>
-
               <div className="bg-white p-1 mt-6">
                 <h3 className="font-semibold">Bill details</h3>
                 <div className="flex gap-4 justify-between ml-1">
@@ -141,6 +200,6 @@ const DisplayCartItem = ({close}) => {
       </div>
     </section>
   );
-}
+};
 
-export default DisplayCartItem
+export default DisplayCartItem;

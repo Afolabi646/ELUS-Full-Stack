@@ -2,25 +2,33 @@ import ProductModel from "../models/product.model.js";
 
 export const createProductController = async (request, response) => {
   try {
-    const { name, image, category, unit, stock, price, more_details } = request.body;
-    if (!name || !image[0] || !category[0] || !unit || !stock || !price) {
+    const { name, image, category, units, stock, more_details } = request.body;
+
+    if (
+      !name ||
+      !image?.length ||
+      !category?.length ||
+      !units?.length ||
+      !stock
+    ) {
       return response.status(400).json({
         message: "Enter required fields",
         error: true,
         success: false,
       });
     }
-   const product = new ProductModel({
-     name,
-     image,
-     category,
-     unit,
-     stock,
-     price,
-     more_details, // change add_details to more_details
-   });
+
+    const product = new ProductModel({
+      name,
+      image,
+      category,
+      units,
+      stock,
+      more_details,
+    });
 
     const saveProduct = await product.save();
+
     return response.json({
       message: "Product Created Successfully",
       data: saveProduct,
@@ -28,6 +36,7 @@ export const createProductController = async (request, response) => {
       success: true,
     });
   } catch (error) {
+    console.error(error);
     return response.status(500).json({
       message: error.message || error,
       error: true,
@@ -35,6 +44,7 @@ export const createProductController = async (request, response) => {
     });
   }
 };
+
 
 export const getProductController = async (request, response) => {
   try {

@@ -1,5 +1,11 @@
 import mongoose from "mongoose";
 
+const unitSchema = new mongoose.Schema({
+  name: String,
+  price: Number,
+  _id: String,
+});
+
 const cartProductSchema = new mongoose.Schema(
   {
     productId: {
@@ -14,6 +20,7 @@ const cartProductSchema = new mongoose.Schema(
       type: mongoose.Schema.ObjectId,
       ref: "User",
     },
+    unit: unitSchema,
   },
   {
     timestamps: true,

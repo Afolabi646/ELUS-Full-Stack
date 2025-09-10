@@ -11,17 +11,19 @@ import Axios from "../utils/Axios";
 import SummaryApi from "../common/SummaryApi";
 import AxiosToastError from "../utils/AxiosToastError";
 import successAlert from "../utils/SuccessAlert";
-import { useEffect } from "react";
 
 const UploadProduct = () => {
   const [data, setData] = useState({
     name: "",
     image: [],
     category: [],
-    unit: "",
-    price: "",
+    units: [],
     more_details: {},
+    stock: "",
+    price: "",
   });
+  const [unitName, setUnitName] = useState("");
+  const [unitPrice, setUnitPrice] = useState("");
   const [imageLoading, setImageLoading] = useState(false);
   const [viewImageURL, setViewImageURL] = useState("");
   const allCategory = useSelector((state) => state.product.allCategory);
@@ -34,6 +36,25 @@ const UploadProduct = () => {
     setData((preve) => {
       return { ...preve, [name]: value };
     });
+  };
+
+const handleAddUnit = (e) => {
+  e.preventDefault();
+  if (!unitName || !unitPrice) return;
+  setData((prev) => ({ 
+    ...prev, 
+    units: [...prev.units, { name: unitName, price: unitPrice }],
+  }));
+  setUnitName("");
+  setUnitPrice("");
+};
+
+
+  const handleRemoveUnit = (index) => {
+    setData((prev) => ({
+      ...prev,
+      units: prev.units.filter((unit, i) => i !== index),
+    }));
   };
 
   const handleUploadImage = async (e) => {
@@ -51,52 +72,37 @@ const UploadProduct = () => {
     setImageLoading(false);
   };
 
-const handleDeleteImage = async (index) => {
-  setData((preve) => {
-    return { ...preve, image: preve.image.filter((img, i) => i !== index) };
-  });
-};
+  const handleDeleteImage = async (index) => {
+    setData((preve) => {
+      return { ...preve, image: preve.image.filter((img, i) => i !== index) };
+    });
+  };
 
+  const handleRemoveCategory = async (index) => {
+    setData((preve) => {
+      return { ...preve, category: preve.category.filter((cat, i) => i !== index) };
+    });
+  };
 
-const handleRemoveCategory = async (index) => {
-  setData((preve) => {
-    return {
-      ...preve,
-      category: preve.category.filter((cat, i) => i !== index),
-    };
-  });
-};
-
-
-
-const handleAddField = () => {
-  if (!fieldName.trim()) return;
-  setData((preve) => {
-    return {
-      ...preve,
-      more_details: { ...preve.more_details, [fieldName]: "" },
-    };
-  });
-  setFieldName("");
-  setOpenAddField(false);
-};
-
+  const handleAddField = () => {
+    if (!fieldName.trim()) return;
+    setData((preve) => {
+      return {
+        ...preve,
+        more_details: { ...preve.more_details, [fieldName]: "" },
+      };
+    });
+    setFieldName("");
+    setOpenAddField(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (
-      !data.name ||
-      !data.unit ||
-      !data.stock ||
-      !data.price ||
-      data.category.length === 0 ||
-      data.image.length === 0
-    ) {
-      // display an error message
-      return;
-    }
     try {
-      const response = await Axios({ ...SummaryApi.createProduct, data: data });
+      const response = await Axios({
+        ...SummaryApi.createProduct,
+        data: data,
+      });
       const { data: responseData } = response;
       if (responseData.success) {
         successAlert(responseData.message);
@@ -104,10 +110,10 @@ const handleAddField = () => {
           name: "",
           image: [],
           category: [],
-          unit: "",
+          units: [],
+          more_details: {},
           stock: "",
           price: "",
-          more_details: {},
         });
       }
     } catch (error) {
@@ -115,29 +121,28 @@ const handleAddField = () => {
     }
   };
 
-
-
   return (
     <section>
       <div className="p-2 bg-white shadow-md flex items-center justify-between">
         <h2 className="font-semibold">Upload Product</h2>
       </div>
-      <div className="grid p-3">
-        <form className="grid gap-4" onSubmit={handleSubmit}>
+      <div>
+      <form onSubmit={handleSubmit}>
+        <div className="grid p-4 gap-4">
           <div className="grid gap-1">
             <label htmlFor="name" className="font-medium">
-              Name
+              Product Name
             </label>
             <input
               type="text"
               id="name"
-              placeholder="Enter product name"
               name="name"
               value={data.name}
               onChange={handleChange}
               required
               className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
             />
+          </div>
           </div>
 
           <div>
@@ -238,20 +243,42 @@ const handleAddField = () => {
           </div>
 
           <div className="grid gap-1">
-            <label htmlFor="unit" className="font-medium">
-              Unit
-            </label>
-            <input
-              type="text"
-              id="unit"
-              placeholder="Enter product unit"
-              name="unit"
-              value={data.unit}
-              onChange={handleChange}
-              required
-              className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
-            />
-          </div>
+  <label className="font-medium">Units</label>
+  <div className="flex flex-wrap gap-3">
+    {data.units.map((unit, index) => (
+      <div key={index} className="text-sm flex items-center gap-1 bg-blue-50 mt-2">
+        <p>{unit.name} - {unit.price}</p>
+        <div className="hover:text-red-500 cursor-pointer" onClick={() => handleRemoveUnit(index)}>
+          <IoClose size={20} />
+        </div>
+      </div>
+    ))}
+  </div>
+  <div className="flex gap-2">
+    <input
+      type="text"
+      placeholder="Unit name (e.g. 1kg)"
+      value={unitName}
+      onChange={(e) => setUnitName(e.target.value)}
+      className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
+    />
+    <input
+      type="number"
+      placeholder="Unit price"
+      value={unitPrice}
+      onChange={(e) => setUnitPrice(e.target.value)}
+      className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
+    />
+    <button 
+  className="bg-yellow-400 hover:bg-yellow-100 py-1 px-3 text-center font-semibold border border-yellow-400 hover:text-neutral-900 cursor-pointer rounded" 
+  onClick={(e) => handleAddUnit(e)}
+>
+  Add Unit
+</button>
+
+  </div>
+</div>
+
 
           <div className="grid gap-1">
             <label htmlFor="stock" className="font-medium">
@@ -269,21 +296,7 @@ const handleAddField = () => {
             />
           </div>
 
-          <div className="grid gap-1">
-            <label htmlFor="price" className="font-medium">
-              Price
-            </label>
-            <input
-              type="number"
-              id="price"
-              placeholder="Enter product price"
-              name="price"
-              value={data.price}
-              onChange={handleChange}
-              required
-              className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
-            />
-          </div>
+         
 
           {/**Add More Fields */}
 
@@ -328,6 +341,7 @@ const handleAddField = () => {
           </button>
         </form>
       </div>
+      
 
       {viewImageURL && (
         <ViewImage url={viewImageURL} close={() => setViewImageURL("")} />
