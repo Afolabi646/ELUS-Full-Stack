@@ -127,22 +127,22 @@ const handleAddUnit = (e) => {
         <h2 className="font-semibold">Upload Product</h2>
       </div>
       <div>
-      <form onSubmit={handleSubmit}>
-        <div className="grid p-4 gap-4">
-          <div className="grid gap-1">
-            <label htmlFor="name" className="font-medium">
-              Product Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={data.name}
-              onChange={handleChange}
-              required
-              className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
-            />
-          </div>
+        <form onSubmit={handleSubmit}>
+          <div className="grid p-4 gap-4">
+            <div className="grid gap-1">
+              <label htmlFor="name" className="font-medium">
+                Product Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={data.name}
+                onChange={handleChange}
+                required
+                className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
+              />
+            </div>
           </div>
 
           <div>
@@ -243,42 +243,50 @@ const handleAddUnit = (e) => {
           </div>
 
           <div className="grid gap-1">
-  <label className="font-medium">Units</label>
-  <div className="flex flex-wrap gap-3">
-    {data.units.map((unit, index) => (
-      <div key={index} className="text-sm flex items-center gap-1 bg-blue-50 mt-2">
-        <p>{unit.name} - {unit.price}</p>
-        <div className="hover:text-red-500 cursor-pointer" onClick={() => handleRemoveUnit(index)}>
-          <IoClose size={20} />
-        </div>
-      </div>
-    ))}
-  </div>
-  <div className="flex gap-2">
-    <input
-      type="text"
-      placeholder="Unit name (e.g. 1kg)"
-      value={unitName}
-      onChange={(e) => setUnitName(e.target.value)}
-      className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
-    />
-    <input
-      type="number"
-      placeholder="Unit price"
-      value={unitPrice}
-      onChange={(e) => setUnitPrice(e.target.value)}
-      className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
-    />
-    <button 
-  className="bg-yellow-400 hover:bg-yellow-100 py-1 px-3 text-center font-semibold border border-yellow-400 hover:text-neutral-900 cursor-pointer rounded" 
-  onClick={(e) => handleAddUnit(e)}
->
-  Add Unit
-</button>
-
-  </div>
-</div>
-
+            <label className="font-medium">Units</label>
+            <div className="flex flex-wrap gap-3">
+              {data.units.map((unit, index) => (
+                <div
+                  key={index}
+                  className="text-sm flex items-center gap-1 bg-blue-50 mt-2"
+                >
+                  <p>
+                    {unit.name} - {unit.price}
+                  </p>
+                  <div
+                    className="hover:text-red-500 cursor-pointer"
+                    onClick={() => handleRemoveUnit(index)}
+                  >
+                    <IoClose size={20} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 flex-col">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  placeholder="Unit name (e.g. 1kg)"
+                  value={unitName}
+                  onChange={(e) => setUnitName(e.target.value)}
+                  className="w-35 lg:w-40 bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
+                />
+                <input
+                  type="number"
+                  placeholder="Unit price"
+                  value={unitPrice}
+                  onChange={(e) => setUnitPrice(e.target.value)}
+                  className="w-25 lg:w-30 bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
+                />
+              </div>
+              <button
+                className="mb-5 bg-yellow-400 hover:bg-yellow-100 py-1 px-3 text-center font-semibold border border-yellow-400 hover:text-neutral-900 cursor-pointer rounded"
+                onClick={(e) => handleAddUnit(e)}
+              >
+                Add Unit
+              </button>
+            </div>
+          </div>
 
           <div className="grid gap-1">
             <label htmlFor="stock" className="font-medium">
@@ -292,11 +300,9 @@ const handleAddUnit = (e) => {
               value={data.stock}
               onChange={handleChange}
               required
-              className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
+              className="mb-5 bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
             />
           </div>
-
-         
 
           {/**Add More Fields */}
 
@@ -331,17 +337,16 @@ const handleAddUnit = (e) => {
 
           <div
             onClick={() => setOpenAddField(true)}
-            className="bg-yellow-400  hover:bg-yellow-100 py-1 px-3 w-32 text-center font-semibold border border-yellow-400 hover:text-neutral-900 cursor-pointer rounded"
+            className="mb-3 bg-yellow-400  hover:bg-yellow-100 py-1 px-3 w-32 text-center font-semibold border border-yellow-400 hover:text-neutral-900 cursor-pointer rounded"
           >
             Add Fields
           </div>
 
-          <button className="bg-yellow-200 hover:bg-yellow-400 py-2 rounded font-semibold">
+          <button className="w-full bg-yellow-400 hover:bg-yellow-100 py-1 px-3 text-center font-semibold border border-yellow-400 hover:text-neutral-900 cursor-pointer rounded">
             Submit
           </button>
         </form>
       </div>
-      
 
       {viewImageURL && (
         <ViewImage url={viewImageURL} close={() => setViewImageURL("")} />

@@ -1,73 +1,84 @@
-import React, { useEffect, useState } from "react"; 
-import { IoClose } from "react-icons/io5"; 
-import { Link, useNavigate } from "react-router-dom"; 
-import { DisplayPriceInPounds } from "../utils/DisplayPriceInPounds"; 
-import { useGlobalContext } from "../provider/GlobalProvider"; 
-import { FaCaretRight } from "react-icons/fa6"; 
-import { useSelector } from "react-redux"; 
-import AddToCartButton from "./AddToCartButton"; 
-import emptyCart from "../assets/emptyCart.jpeg"; 
-import toast from "react-hot-toast"; 
+import React, { useEffect, useState } from "react";
+import { IoClose } from "react-icons/io5";
+import { Link, useNavigate } from "react-router-dom";
+import { DisplayPriceInPounds } from "../utils/DisplayPriceInPounds";
+import { useGlobalContext } from "../provider/GlobalProvider";
+import { FaCaretRight } from "react-icons/fa6";
+import { useSelector } from "react-redux";
+import AddToCartButton from "./AddToCartButton";
+import emptyCart from "../assets/emptyCart.jpeg";
+import toast from "react-hot-toast";
 
-const DisplayCartItem = ({ close }) => { 
-  const cartItem = useSelector((state) => state.cartItem.cart); 
-  const user = useSelector((state) => state?.user); 
-  const navigate = useNavigate(); 
-  const [selectedUnit, setSelectedUnit] = useState({}); 
+const DisplayCartItem = ({ close }) => {
+  const cartItem = useSelector((state) => state.cartItem.cart);
+  const user = useSelector((state) => state?.user);
+  const navigate = useNavigate();
+  const [selectedUnit, setSelectedUnit] = useState({});
+  const { updateCartItem } = useGlobalContext();
 
-  useEffect(() => { 
-    const storedSelectedUnits = JSON.parse(localStorage.getItem("selectedUnits")) || {}; 
-    if (cartItem.length > 0) { 
-      setSelectedUnit( 
-        cartItem.reduce( 
-          (acc, item) => ({ 
-            ...acc, 
-            [item._id]: storedSelectedUnits[item._id] || item.unit || item.productId.units[0], 
-          }), 
-          {} 
-        ) 
-      ); 
-    } 
-  }, [cartItem]); 
+  useEffect(() => {
+    const storedSelectedUnits =
+      JSON.parse(localStorage.getItem("selectedUnits")) || {};
+    if (cartItem.length > 0) {
+      setSelectedUnit(
+        cartItem.reduce(
+          (acc, item) => ({
+            ...acc,
+            [item._id]:
+              storedSelectedUnits[item._id] ||
+              item.unit ||
+              item.productId?.units[0],
+          }),
+          {}
+        )
+      );
+    }
+  }, [cartItem]);
 
-  useEffect(() => { 
-    localStorage.setItem("selectedUnits", JSON.stringify(selectedUnit)); 
-  }, [selectedUnit]); 
+  useEffect(() => {
+    localStorage.setItem("selectedUnits", JSON.stringify(selectedUnit));
+  }, [selectedUnit]);
 
-  const totalPrice = cartItem.reduce((acc, item) => { 
-    return ( 
-      acc + (selectedUnit[item._id]?.price || item.unit.price) * item.quantity 
-    ); 
-  }, 0); 
+  const totalPrice = cartItem.reduce((acc, item) => {
+    return (
+      acc +
+      (selectedUnit[item._id]?.price ||
+        item?.unit?.price ||
+        item?.productId?.price ||
+        0) *
+        item.quantity
+    );
+  }, 0);
 
-  const totalQty = cartItem.reduce((acc, item) => acc + item.quantity, 0); 
 
-  const grandTotal = totalPrice + 7.99; 
+  const totalQty = cartItem.reduce((acc, item) => acc + item.quantity, 0);
 
-  const redirectToCheckoutPage = () => { 
-    if (user?._id) { 
-      navigate("/checkout"); 
-      if (close) { 
-        close(); 
-      } 
-      return; 
-    } 
-    toast("please login"); 
-  }; 
+  const grandTotal = totalPrice + 7.99;
 
-  const handleUnitChange = (itemId, unit) => { 
-    setSelectedUnit((prevSelectedUnit) => ({ 
-      ...prevSelectedUnit, 
-      [itemId]: unit, 
-    })); 
-    const cartItemDetails = cartItem.find((item) => item._id === itemId); 
-    updateCartItem( 
-      cartItemDetails?._id, 
-      cartItemDetails.quantity, 
-      "update", 
-      unit 
-    ); 
-  }; 
+  const redirectToCheckoutPage = () => {
+    if (user?._id) {
+      navigate("/checkout");
+      if (close) {
+        close();
+      }
+      return;
+    }
+    toast("please login");
+  };
+
+  const handleUnitChange = (itemId, unit) => {
+    setSelectedUnit((prevSelectedUnit) => ({
+      ...prevSelectedUnit,
+      [itemId]: unit,
+    }));
+    const cartItemDetails = cartItem.find((item) => item._id === itemId);
+    updateCartItem(
+      cartItemDetails?._id,
+      cartItemDetails.quantity,
+      "update",
+      unit
+    );
+  };
 
   return (
     <section className="bg-neutral-900/70 fixed top-0 bottom-0 right-0 left-0 z-50">
@@ -126,8 +137,10 @@ const DisplayCartItem = ({ close }) => {
                         )}
                         <p className="font-semibold">
                           {DisplayPriceInPounds(
-                            selectedUnit[item._id]?.price * item.quantity ||
-                              item.unit.price * item.quantity
+                            (selectedUnit[item._id]?.price ||
+                              item?.unit?.price ||
+                              item?.productId?.price ||
+                              0) * item.quantity
                           )}
                         </p>
                       </div>

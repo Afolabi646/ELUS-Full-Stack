@@ -23,12 +23,16 @@ const Footer = () => {
           </a>
         </div>
       </div>
-      <div className="fixed bottom-25 left-80 right-0 rounded-2xl lg:bottom-25 lg:left-300">
-        <a href="https://wa.me/+447311145412" target="blank">
+      <div className="fixed bottom-18 left-72 md:bottom-18 md:left-190 lg:bottom-18 lg:left-310 right-0 rounded-2xl">
+        <a
+          href="https://wa.me/+447311145412"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <img
-            className="lg:w-10 lg:h-10 w-10 h-10 rounded-full"
+            className="lg:w-10 lg:h-10 w-7 h-7 rounded-full"
             src={whatsapp}
-            alt=""
+            alt="WhatsApp"
           />
         </a>
       </div>

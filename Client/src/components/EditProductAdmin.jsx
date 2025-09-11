@@ -132,6 +132,8 @@ const [data, setData] = useState({
   };
 
 const handleSubmit = async (e) => {
+  console.log("Submit button clicked");
+
   e.preventDefault();
   if (isSubmitting) return;
   setIsSubmitting(true);
@@ -139,7 +141,7 @@ const handleSubmit = async (e) => {
   console.log("Submitting product data:", data);
   try {
     const response = await Axios({
-      ...SummaryApi.updateProduct,
+      ...SummaryApi.updateProductDetails,
       data: { ...data, _id: productData._id },
     });
     console.log("Response:", response);
@@ -185,7 +187,6 @@ const handleSubmit = async (e) => {
               />
             </div>
           </div>
-
           <div>
             <p className="font-medium">Image</p>
             <div>
@@ -282,7 +283,6 @@ const handleSubmit = async (e) => {
               </div>
             </div>
           </div>
-
           <div className="grid gap-1">
             <label className="font-medium">Units</label>
             <div className="flex flex-wrap gap-3">
@@ -303,21 +303,23 @@ const handleSubmit = async (e) => {
                 </div>
               ))}
             </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Unit name (e.g. 1kg)"
-                value={unitName}
-                onChange={(e) => setUnitName(e.target.value)}
-                className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
-              />
-              <input
-                type="number"
-                placeholder="Unit price"
-                value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
-                className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
-              />
+            <div className="flex gap-4 flex-col">
+              <div className="flex gap-5">
+                <input
+                  type="text"
+                  placeholder="Unit name (e.g. 1kg)"
+                  value={unitName}
+                  onChange={(e) => setUnitName(e.target.value)}
+                  className="w-35 lg:w-40 bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
+                />
+                <input
+                  type="number"
+                  placeholder="Unit price"
+                  value={unitPrice}
+                  onChange={(e) => setUnitPrice(e.target.value)}
+                  className="w-25 lg:w-30 bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
+                />
+              </div>
               <button
                 className="bg-yellow-400 hover:bg-yellow-100 py-1 px-3 text-center font-semibold border border-yellow-400 hover:text-neutral-900 cursor-pointer rounded"
                 onClick={(e) => handleAddUnit(e)}
@@ -326,8 +328,7 @@ const handleSubmit = async (e) => {
               </button>
             </div>
           </div>
-
-          <div className="grid gap-1">
+          <div className="grid gap-1 mt-5">
             <label htmlFor="stock" className="font-medium">
               Number of stock
             </label>
@@ -342,9 +343,7 @@ const handleSubmit = async (e) => {
               className="bg-blue-50 p-2 outline-none border focus-within:border-yellow-400 rounded"
             />
           </div>
-
           {/**Add More Fields */}
-
           {Object?.keys(data?.more_details)?.map((k, index) => {
             return (
               <div className="grid gap-1">
@@ -373,16 +372,21 @@ const handleSubmit = async (e) => {
               </div>
             );
           })}
-
           <div
             onClick={() => setOpenAddField(true)}
-            className="bg-yellow-400  hover:bg-yellow-100 py-1 px-3 w-32 text-center font-semibold border border-yellow-400 hover:text-neutral-900 cursor-pointer rounded"
+            className="mt-5 bg-yellow-400  hover:bg-yellow-100 py-1 px-3 w-32 text-center font-semibold border border-yellow-400 hover:text-neutral-900 cursor-pointer rounded"
           >
             Add Fields
           </div>
 
-          <button type="submit" className="bg-yellow-200 hover:bg-yellow-400 py-2 rounded font-semibold">
-            Submit
+          <button
+            type="submit"
+            className={`w-full mt-5 ${
+              isSubmitting ? "bg-gray-400" : "bg-yellow-400 hover:bg-yellow-400"
+            } py-2 rounded font-semibold`}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Submitting..." : "Submit"}
           </button>
         </form>
         {viewImageURL && (

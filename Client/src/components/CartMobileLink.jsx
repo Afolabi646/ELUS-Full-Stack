@@ -23,7 +23,7 @@ const CartMobileLink = () => {
               </div>
               <div className="text-xs">
                 <p>{totalQty}items</p>
-                <p>{DisplayPriceInPounds(totalPrice)}</p>
+                {/* <p>{DisplayPriceInPounds(totalPrice)}</p> */}
               </div>
             </div>
 

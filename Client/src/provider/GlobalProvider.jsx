@@ -24,44 +24,48 @@ const GlobalProvider = ({ children }) => {
       const { data: responseData } = response;
       if (responseData.success) {
         dispatch(handleAddItemCart(responseData.data));
+      } else {
+        throw new Error(responseData.message);
       }
     } catch (error) {
       AxiosToastError(error);
     }
   };
 
-const updateCartItem = async (id, qty, action, unit = null) => {
-  try {
-    const response = await Axios({
-      ...SummaryApi.updateCartItemQty,
-      data: {
-        _id: id,
-        qty: qty,
-        unit: unit,
-      },
-    });
-    const { data: responseData } = response;
-    if (responseData.success) {
-      if (action === "decrease") {
-        toast.success("Quantity decreased");
+  const updateCartItem = async (id, qty, action, unit = null) => {
+    try {
+      const response = await Axios({
+        ...SummaryApi.updateCartItemQty,
+        data: { _id: id, qty: qty, unit: unit },
+      });
+      const { data: responseData } = response;
+      if (responseData.success) {
+        if (action === "decrease") {
+          toast.success("Quantity decreased");
+        } else {
+          toast.success(responseData.message);
+        }
+        fetchCartItem();
       } else {
-        toast.success(responseData.message);
+        throw new Error(responseData.message);
       }
-      fetchCartItem();
+    } catch (error) {
+      AxiosToastError(error);
     }
-  } catch (error) {
-    AxiosToastError(error);
-  }
-};
-
+  };
 
   const deleteCartItem = async (cartId) => {
     try {
-      const response = await Axios({ ...SummaryApi.deleteCartItem, data: { _id: cartId } });
+      const response = await Axios({
+        ...SummaryApi.deleteCartItem,
+        data: { _id: cartId },
+      });
       const { data: responseData } = response;
       if (responseData.success) {
         toast.success("Item removed");
         fetchCartItem();
+      } else {
+        throw new Error(responseData.message);
       }
     } catch (error) {
       AxiosToastError(error);
@@ -74,45 +78,38 @@ const updateCartItem = async (id, qty, action, unit = null) => {
       const { data: responseData } = response;
       if (responseData.success) {
         dispatch(handleAddAddress(responseData.data));
+      } else {
+        throw new Error(responseData.message);
       }
     } catch (error) {
       AxiosToastError(error);
     }
   };
 
-const fetchOrder = async () => {
-  try {
-    const response = await Axios({ ...SummaryApi.getOrderItems });
-    const { data: responseData } = response;
-    console.log("API response:", responseData);
-    if (responseData.success) {
-      dispatch(setOrder(responseData.data));
-      console.log("Orders stored in Redux state:", responseData.data);
+  const fetchOrder = async () => {
+    try {
+      const response = await Axios({ ...SummaryApi.getOrderItems });
+      const { data: responseData } = response;
+      if (responseData.success) {
+        dispatch(setOrder(responseData.data));
+      } else {
+        throw new Error(responseData.message);
+      }
+    } catch (error) {
+      console.error(error);
     }
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-const MyOrders = () => {
-  const orders = useSelector((state) => state.orders.order);
-  console.log("Orders in component:", orders);
-  // ...
-};
-
-
+  };
 
   const handleStripePayment = async (sessionId) => {
     try {
       const response = await stripe.redirectToCheckout({ sessionId });
       if (response.error) {
-        // Handle error
+        throw new Error(response.error.message);
       } else {
-        // Payment successful, fetch orders
-        await fetchOrder();
+        fetchOrder();
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
