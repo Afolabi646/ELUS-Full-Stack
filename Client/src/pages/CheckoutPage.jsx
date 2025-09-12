@@ -11,13 +11,17 @@ import { useNavigate } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
 
 const CheckoutPage = () => {
-  const { totalPrice, totalQty, fetchCartItem, fetchOrder } =
-    useGlobalContext();
+  const { totalQty, fetchCartItem, fetchOrder } = useGlobalContext();
+  const cartItemsList = useSelector((state) => state.cartItem.cart);
+  const totalPrice = cartItemsList.reduce((acc, item) => {
+    return (
+      acc + (item?.unit?.price || item?.productId?.price || 0) * item.quantity
+    );
+  }, 0);
   const grandTotal = totalPrice + 7.99;
   const [openAddAddress, setOpenAddAddress] = useState(false);
   const addressList = useSelector((state) => state.addresses.addressList);
   const [selectAddress, setSelectAddress] = useState(0);
-  const cartItemsList = useSelector((state) => state.cartItem.cart);
   const navigate = useNavigate();
 
   // New function to clear cart after successful payment
@@ -65,6 +69,13 @@ const CheckoutPage = () => {
     );
 
     try {
+      const totalPrice = cartItemsList.reduce((acc, item) => {
+        return (
+          acc +
+          (item?.unit?.price || item?.productId?.price || 0) * item.quantity
+        );
+      }, 0);
+      const grandTotal = totalPrice + 7.99;
       const response = await Axios({
         ...SummaryApi.payment_url,
         data: {
@@ -73,8 +84,7 @@ const CheckoutPage = () => {
             productId: item.productId,
             quantity: item.quantity,
           })),
-          totalAmt: grandTotal,
-          subTotalAmt: totalPrice,
+          totalAmt: Math.round(grandTotal * 100),
         },
       });
 
@@ -119,9 +129,17 @@ const CheckoutPage = () => {
         toast.error("Please select a valid address");
         return;
       }
+
+      const totalPrice = cartItemsList.reduce((acc, item) => {
+        return (
+          acc +
+          (item?.unit?.price || item?.productId?.price || 0) * item.quantity
+        );
+      }, 0);
+      const grandTotal = totalPrice + 7.99;
+
       const stripePublickKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
       const stripePromise = await loadStripe(stripePublickKey);
-
       const response = await Axios({
         ...SummaryApi.payment_url,
         data: {
@@ -133,18 +151,16 @@ const CheckoutPage = () => {
           totalAmt: Math.round(grandTotal * 100),
         },
       });
-
       const { data: responseData } = response;
-
       // For online payments, cart clearing happens on the success page
       // after Stripe redirects back to our site
-      stripePromise.redirectToCheckout({ sessionId: responseData.id })
-      if(fetchCartItem){
-        fetchCartItem()
+      stripePromise.redirectToCheckout({ sessionId: responseData.id });
+      if (fetchCartItem) {
+        fetchCartItem();
       }
-       if (fetchOrder) {
-         fetchOrder();
-       }
+      if (fetchOrder) {
+        fetchOrder();
+      }
     } catch (error) {
       toast.dismiss(); // Dismiss loading toast
       if (error.response) {
@@ -235,7 +251,6 @@ const CheckoutPage = () => {
             >
               Online Payment
             </button>
-            
           </div>
         </div>
       </div>
