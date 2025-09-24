@@ -137,9 +137,17 @@ const CheckoutPage = () => {
         );
       }, 0);
       const grandTotal = totalPrice + 7.99;
+      console.log("Grand Total:", grandTotal);
+      console.log(
+        "Total Amount being passed to Stripe:",
+        Math.round(grandTotal * 100)
+      );
 
-      const stripePublickKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-      const stripePromise = await loadStripe(stripePublickKey);
+
+      const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+      console.log("Stripe Public Key:", stripePublicKey);
+
+      const stripePromise = await loadStripe(stripePublicKey);
       const response = await Axios({
         ...SummaryApi.payment_url,
         data: {
@@ -186,7 +194,7 @@ const CheckoutPage = () => {
                 <label
                   htmlFor={"address" + index}
                   key={index}
-                  className={!address.status && "hidden"}
+                  className={!address.status ? "hidden" : ""}
                 >
                   <div className="border rounded p-3 flex gap-3 hover:bg-blue-50">
                     <div>

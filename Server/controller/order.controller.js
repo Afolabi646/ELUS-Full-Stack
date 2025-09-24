@@ -3,6 +3,7 @@ import stripe from "../config/stripe.js";
 import CartProductModel from "../models/cartProduct.model.js";
 import OrderModel from "../models/order.model.js";
 import UserModel from "../models/user.model.js";
+import AddressModel from "../models/address.model.js";
 import mongoose from "mongoose";
 
 export async function CashOnDeliveryOrderController(req, res) {
@@ -59,61 +60,75 @@ export async function paymentController(request, response) {
     const userId = request.userId;
     const { list_items, totalAmt, addressId, subTotalAmt } = request.body;
 
+    // Retrieve the address document using the addressId
+    const address = await AddressModel.findById(addressId);
+
+    if (!address) {
+      return response
+        .status(400)
+        .json({ message: "Address not found", error: true, success: false });
+    }
+
     const user = await UserModel.findById(userId);
 
-   
-const line_items = [
-  ...list_items.map((item) => {
-    return {
-      price_data: {
-        currency: "gbp",
-        product_data: {
-          name: item.productId.name,
-          images: item.productId.image,
-          metadata: {
-            productId: item.productId._id,
+    const line_items = [
+      ...list_items.map((item) => {
+        return {
+          price_data: {
+            currency: "gbp",
+            product_data: {
+              name: item.productId.name,
+              images: item.productId.image,
+              metadata: {
+                productId: item.productId._id,
+              },
+            },
+            unit_amount: Math.round(item.productId.price * 100),
           },
+          adjustable_quantity: {
+            enabled: true,
+            minimum: 1,
+          },
+          quantity: item.quantity,
+        };
+      }),
+      {
+        price_data: {
+          currency: "gbp",
+          product_data: {
+            name: "Delivery Fee",
+          },
+          unit_amount: Math.round(7.99 * 100),
         },
-        unit_amount: Math.round(item.productId.price * 100),
+        quantity: 1,
       },
-      adjustable_quantity: {
-        enabled: true,
-        minimum: 1,
-      },
-      quantity: item.quantity,
-    };
-  }),
-  {
-    price_data: {
-      currency: "gbp",
-      product_data: {
-        name: "Delivery Fee",
-      },
-      unit_amount: Math.round(7.99 * 100),
-    },
-    quantity: 1,
-  },
-];
+    ];
 
-
-    // Modified to include a client reference ID for frontend identification
     const params = {
       submit_type: "pay",
       mode: "payment",
       payment_method_types: ["card"],
       customer_email: user.email,
       metadata: {
-        userId: userId.toString(), // Ensure userId is a string
+        userId: userId.toString(),
         addressId: addressId,
       },
-      client_reference_id: userId.toString(), // Add client reference ID for frontend identification
+      shipping_address_collection: {
+        allowed_countries: ["GB"], // Adjust this to your needs
+      },
+      client_reference_id: userId.toString(),
       line_items: line_items,
-      // Add a query parameter to the success URL to indicate successful payment
       success_url: `${process.env.FRONTEND_URL}/success?payment_success=true&user_id=${userId.toString()}`,
       cancel_url: `${process.env.FRONTEND_URL}/cancel`,
     };
 
+
     const session = await stripe.checkout.sessions.create(params);
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (session.expires_at < currentTime) {
+      return response.status(400).json({ message: "Session has expired" });
+    }
 
     return response.status(200).json(session);
   } catch (error) {
@@ -436,6 +451,7 @@ export async function webhookStripe(request, response) {
   try {
     const event = request.body;
     console.log("Event type:", event.type);
+    console.log("Event ID:", event.id);
 
     switch (event.type) {
       case "checkout.session.completed":
@@ -465,21 +481,20 @@ export async function webhookStripe(request, response) {
           return response.json({ received: true, error: "User not found" });
         }
 
-        // Get line items and process order
-        const lineItems = await stripe.checkout.sessions.listLineItems(
-          session.id
-        );
-        await storeOrderInDatabase(session, lineItems.data);
-
-        // Clear cart
         try {
+          const lineItems = await stripe.checkout.sessions.listLineItems(
+            session.id
+          );
+          await storeOrderInDatabase(session, lineItems.data);
+
+          // Clear cart
           await CartProductModel.deleteMany({ userId });
           await UserModel.findByIdAndUpdate(userId, {
             $set: { shopping_cart: [] },
           });
           console.log("Cart cleared");
         } catch (error) {
-          console.error("Error clearing cart:", error);
+          console.error("Error processing line items or clearing cart:", error);
         }
 
         break;
@@ -493,6 +508,7 @@ export async function webhookStripe(request, response) {
     response.status(500).json({ message: "Internal Server Error" });
   }
 }
+
 
 
 // New function to process order products from temporary cart items
@@ -548,44 +564,24 @@ async function getOrderList(userId) {
 
 
 export async function getOrderDetailsController(request, response) {
-    try {
-        const userId = request.userId
-
-        const orderList = await OrderModel.find({ userId: userId })
-          .sort({ createdAt: -1 })
-          .populate("delivery_address")
-          .then((orders) =>
-            orders.filter(
-              (order) => order.product_details.name !== "Delivery Fee"
-            )
-          );
-
-        return response.json({
-          message : "Order list",
-          data : orderList,
-          error : false,
-          success : true
-        })
-    } catch (error) {
-      return response.status(500).json({
-        message : error.message || error,
-        error : true,
-        success : false
-      })
-    }
-}
-
-
-export async function getAllOrdersController(request, response) {
   try {
-    const orders = await OrderModel.find()
+    const userId = request.userId;
+    const orderList = await OrderModel.find({ userId: userId })
       .sort({ createdAt: -1 })
       .populate("delivery_address")
-      .populate("userId");
+      .populate("userId") // Populate user information
+      .then((orders) =>
+        orders.map((order) => ({
+          ...order.toObject(),
+          product_details: order.product_details,
+          user_name: order.userId.name, // Include user name
+          user_email: order.userId.email, // Include user email
+        }))
+      );
 
     return response.json({
-      message: "All orders",
-      data: orders,
+      message: "Order list",
+      data: orderList,
       error: false,
       success: true,
     });
@@ -597,4 +593,46 @@ export async function getAllOrdersController(request, response) {
     });
   }
 }
+
+
+export async function getAllOrdersController(request, response) {
+  try {
+    const orders = await OrderModel.find()
+      .sort({ createdAt: -1 })
+      .populate("delivery_address")
+      .populate("userId")
+      .then((orders) => orders.map((order) => ({
+        ...order.toObject(),
+        product_details: order.product_details,
+        user_name: order.userId?.name,
+        user_email: order.userId?.email,
+        delivery_address_details: order.delivery_address,
+      })));
+
+    if (!orders || orders.length === 0) {
+      return response.json({
+        message: "No orders found",
+        data: [],
+        error: false,
+        success: true,
+      });
+    }
+
+    return response.json({
+      message: "All orders",
+      data: orders,
+      error: false,
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return response.status(500).json({
+      message: error.message || error,
+      error: true,
+      success: false,
+    });
+  }
+}
+
+
 

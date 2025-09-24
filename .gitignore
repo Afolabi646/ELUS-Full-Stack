@@ -29,3 +29,5 @@ Server/node_modules
 .env
 .Client/.env
 .Server/.env
+Client/package-lock.json
+Server/package-lock.json
