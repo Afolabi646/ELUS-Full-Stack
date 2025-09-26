@@ -5,6 +5,7 @@ import OrderModel from "../models/order.model.js";
 import UserModel from "../models/user.model.js";
 import AddressModel from "../models/address.model.js";
 import mongoose from "mongoose";
+import { sendNewOrderEmailToAdmin } from "./email.controller.js";
 
 export async function CashOnDeliveryOrderController(req, res) {
   try {
@@ -121,6 +122,7 @@ export async function paymentController(request, response) {
       success_url: `${process.env.FRONTEND_URL}/success?payment_success=true&user_id=${userId.toString()}`,
       cancel_url: `${process.env.FRONTEND_URL}/cancel`,
     };
+
 
 
     const session = await stripe.checkout.sessions.create(params);
@@ -487,6 +489,52 @@ export async function webhookStripe(request, response) {
           );
           await storeOrderInDatabase(session, lineItems.data);
 
+const address = await AddressModel.findById(session.metadata.addressId);
+if (!address) {
+  console.error("Address not found with ID:", session.metadata.addressId);
+  return response.json({ received: true, error: "Address not found" });
+}
+
+const addressString = [
+  address.address_line_1,
+  address.address_line_2,
+  address.city,
+  address.postcode,
+].filter(Boolean).join(', ') || 'No address provided';
+
+const orderDetails = {
+  orderId: session.id,
+  customerName: user.name,
+  customerEmail: session.customer_details.email,
+  address: session.shipping_details
+    ? `${session.shipping_details.address.line1}, ${session.shipping_details.address.city}, ${session.shipping_details.address.postal_code}`
+    : "No address provided",
+  products: lineItems.data.map((item) => ({
+    name: item.description,
+    quantity: item.quantity,
+    amount: (item.amount_total / 100).toFixed(2),
+  })),
+  paymentStatus: session.payment_status,
+  totalAmount: (session.amount_total / 100).toFixed(2),
+};
+
+
+
+
+const adminEmail = process.env.ADMIN_EMAIL;
+
+console.log("Sending new order email to admin:", adminEmail);
+console.log("Order details:", orderDetails);
+try {
+  await sendNewOrderEmailToAdmin(adminEmail, orderDetails);
+} catch (error) {
+  console.error("Error sending new order email to admin:", error);
+}
+
+
+
+
+
           // Clear cart
           await CartProductModel.deleteMany({ userId });
           await UserModel.findByIdAndUpdate(userId, {
@@ -633,6 +681,5 @@ export async function getAllOrdersController(request, response) {
     });
   }
 }
-
 
 

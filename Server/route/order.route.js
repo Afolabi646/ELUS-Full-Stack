@@ -27,15 +27,15 @@ orderRouter.get("/all-orders", auth, getAllOrdersController);
 
 orderRouter.get("/send-test-email", async (req, res) => {
   try {
-    await sendOrderConfirmationEmail("adeshinamuyideen646@gmail.com", {
-      orderId: "Test Order",
-    });
-    res.send("Test email sent!");
+    const recipientEmail = process.env.ADMIN_EMAIL;
+    const orderDetails = { orderId: "Test Order" };
+
+    await sendOrderConfirmationEmail(recipientEmail, orderDetails);
+    res.status(200).send(`Test email sent to ${recipientEmail}!`);
   } catch (error) {
-    console.error(error);
+    console.error("Error sending test email:", error);
     res.status(500).send("Error sending test email");
   }
 });
-
 
 export default orderRouter;
