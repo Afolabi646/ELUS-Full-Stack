@@ -23,7 +23,16 @@ orderRouter.post("/clear-cart/:userId", auth, clearCartEndpoint);
 
 // Order retrieval
 orderRouter.get("/order-list", auth, getOrderDetailsController);
-orderRouter.get("/all-orders", auth, getAllOrdersController);
+
+orderRouter.get(
+  "/all-orders",
+  (req, res, next) => {
+    console.log("All orders route hit");
+    next();
+  },
+  getAllOrdersController
+);
+
 
 orderRouter.get("/send-test-email", async (req, res) => {
   try {

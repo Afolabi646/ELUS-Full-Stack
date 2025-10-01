@@ -32,7 +32,7 @@ const CategoryWiseProductDisplay = ({id,name}) => {
             if(responseData.success){
               setData(responseData.data)
             }
-            console.log(responseData);
+            
             
 
         } catch (error) {
@@ -88,7 +88,7 @@ const CategoryWiseProductDisplay = ({id,name}) => {
             })}
 
           {data.map((p, index) => {
-            console.log("display",p);
+          
             return (
               <Link
                 to={`/product/${p._id}`}

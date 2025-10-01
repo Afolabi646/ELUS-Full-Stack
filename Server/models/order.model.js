@@ -11,16 +11,31 @@ const orderSchema = new mongoose.Schema(
       required: [true, "Provide orderId"],
       unique: true,
     },
-    productId: {
-      type: String,
-      required: [true, "Provide productId"],
-    },
-
-    product_details: {
-      name: String,
-      image: String,
-    },
-
+    products: [
+      {
+        productId: {
+          type: String,
+          required: [true, "Provide productId"],
+        },
+        product_details: {
+          name: String,
+          image: String,
+        },
+        unitPrice: {
+          type: Number,
+          required: [true, "Provide unit price"],
+        },
+        quantity: {
+          type: Number,
+          required: [true, "Provide quantity"],
+          min: 1,
+        },
+        totalPrice: {
+          type: Number,
+          required: [true, "Provide total price"],
+        },
+      },
+    ],
     paymentId: {
       type: String,
       default: "",

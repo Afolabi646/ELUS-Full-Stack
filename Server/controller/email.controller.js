@@ -8,52 +8,28 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
-  tls: {
-    rejectUnauthorized: false,
-  },
 });
 
+
 const generateEmailContent = (orderDetails, type) => {
+  if (!orderDetails) {
+    throw new Error("Order details are missing");
+  }
+
   const products = orderDetails.products
-    .map((product) => `${product.name} (x${product.quantity})`)
-    .join(", ");
-  const address = orderDetails.address || {};
-  const deliveryAddress =
-    [
-      address.address_line_1,
-      address.address_line_2,
-      address.city,
-      address.postcode,
-    ]
-      .filter(Boolean)
-      .join(", ") || "No address provided";
+    ? orderDetails.products.map((product) => product.name).join(", ")
+    : "No product details";
+
+  const deliveryAddress = orderDetails.delivery_address
+    ? `${orderDetails.delivery_address.address_line || ""}, ${orderDetails.delivery_address.city || ""}, ${orderDetails.delivery_address.state || ""} - ${orderDetails.delivery_address.pincode || ""}`
+    : "No address provided";
 
   if (type === "customer") {
-    return `Dear Customer,
-
-Your order has been successfully placed. Below are the details of your order:
-
-Order ID: ${orderDetails.orderId}
-Products: ${products}
-Total Amount: ${orderDetails.totalAmount}
-Delivery Address: ${deliveryAddress}
-
-Thank you for shopping with us!
-Best regards,
-[Your Name]`;
+    return `Dear Customer, Your order has been successfully placed. Below are the details of your order: Order ID: ${orderDetails.orderId} Products: ${products} Total Amount: ${orderDetails.totalAmt} Delivery Address: ${deliveryAddress} Thank you for shopping with us! Best regards, [Your Name]`;
+  } else if (type === "admin") {
+    return `A new order has been placed. Below are the details of the order: Order ID: ${orderDetails.orderId} Products: ${products} Total Amount: ${orderDetails.totalAmt} Delivery Address: ${deliveryAddress} Please process the order accordingly. Best regards, [Your System]`;
   } else {
-    return `A new order has been placed. Below are the details of the order:
-
-Order ID: ${orderDetails.orderId}
-Customer Name: ${orderDetails.customerName}
-Customer Email: ${orderDetails.customerEmail}
-Products: ${products}
-Total Amount: ${orderDetails.totalAmount}
-Delivery Address: ${deliveryAddress}
-
-Please process the order accordingly.
-Best regards,
-[Your System]`;
+    throw new Error("Invalid email type");
   }
 };
 
@@ -71,8 +47,6 @@ const sendEmail = async (to, subject, content) => {
     return info;
   } catch (error) {
     console.error("Error sending email:", error);
-    console.error("Error code:", error.code);
-    console.error("Error response:", error.response);
     throw error;
   }
 };
@@ -83,10 +57,10 @@ const sendOrderConfirmationEmail = async (userEmail, orderDetails) => {
   return sendEmail(userEmail, subject, content);
 };
 
-const sendNewOrderEmailToAdmin = async (adminEmail, orderDetails) => {
+const sendNewOrderEmailToAdmin = async (orderDetails) => {
   const subject = "New Order";
   const content = generateEmailContent(orderDetails, "admin");
-  return sendEmail(adminEmail, subject, content);
+  return sendEmail(process.env.ADMIN_EMAIL, subject, content);
 };
 
 export { sendOrderConfirmationEmail, sendNewOrderEmailToAdmin };

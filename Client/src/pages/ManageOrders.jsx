@@ -1,22 +1,31 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useSelector } from "react-redux";
 import NoData from "../components/NoData";
+import { Link } from "react-router-dom";
 
 const ManageOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const reduxOrders = useSelector((state) => state.order?.order);
+
+  console.log("Redux Orders:", reduxOrders);
 
   useEffect(() => {
+    console.log("Fetching orders...");
     const fetchOrders = async () => {
       try {
-        const response = await axios.get("/api/order/all-orders");
-        console.log("API Response:", response.data);
-        setOrders(response.data.data);
-        console.log("Orders state:", response.data.data);
+        const response = await fetch("/api/order/all-orders");
+        if (!response.ok) {
+          throw new Error(`Error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("API Response:", data);
+        setOrders(data?.data || []);
       } catch (error) {
-        setError(error.message);
         console.error("Error fetching orders:", error);
+        setError(error.message);
       } finally {
         setLoading(false);
       }
@@ -32,40 +41,30 @@ const ManageOrders = () => {
     return <div>Error: {error}</div>;
   }
 
+  console.log("Orders State:", orders);
+
   return (
     <div>
       <div className="bg-white shadow-md p-3 font-semibold">
         <h1>Manage Orders</h1>
       </div>
-      {orders?.length > 0 ? (
-        orders.map((order, index) => (
-          <div
-            key={order._id + index + "order"}
-            className="border rounded p-4 text-sm"
-          >
-            <p>Order No: {order?.orderId}</p>
-            <div className="flex gap-3">
-              <img src={order?.product_details?.image} className="w-14 h-14" />
-              <p className="font-medium">{order?.product_details?.name}</p>
-            </div>
-            <p>
-              {" "}
-              Customer: {order?.user_name} ({order?.user_email}){" "}
-            </p>
-            <p>
-              {" "}
-              Address: {order?.delivery_address_details?.address_line_1},{" "}
-              {order?.delivery_address_details?.city},{" "}
-              {order?.delivery_address_details?.state}{" "}
-              {order?.delivery_address_details?.postal_code}{" "}
-            </p>
-            <p>Order Date: {new Date(order?.createdAt).toLocaleString()}</p>
-            <p>Status: {order?.payment_status}</p>
-          </div>
-        ))
-      ) : (
-        <NoData />
-      )}
+    
+{
+  Array.isArray(orders) && orders.length > 0 ? (
+    orders.map((order) => (
+      <div key={order._id} className="border rounded p-4 text-sm mb-4">
+        <Link to={`/orders/${order._id}`}>
+          <p>Customer: {order.userId?.name}</p>
+          <p>Email: {order.userId?.email}</p>
+          <p>Order Date: {new Date(order.createdAt).toLocaleString()}</p>
+        </Link>
+      </div>
+    ))
+  ) : (
+    <NoData />
+  )
+}
+
     </div>
   );
 };

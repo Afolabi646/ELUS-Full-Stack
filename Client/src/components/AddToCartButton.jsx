@@ -9,8 +9,7 @@ import { useSelector } from "react-redux";
 import { FaMinus, FaPlus } from "react-icons/fa6";
 
 const AddToCartButton = ({ data }) => {
-  console.log("Received data:", data);
-  console.log("Selected unit:", data.selectedUnit);
+  
   
   const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext();
   const [loading, setLoading] = useState(false);
@@ -26,7 +25,6 @@ const handleAddToCart = async (e) => {
     
     if (!data || !data._id || !data.selectedUnit) {
       console.error("Invalid data");
-      console.log("Selected unit:", data.selectedUnit);
       toast.error("Invalid product data");
       return;
     }
@@ -38,7 +36,7 @@ const handleAddToCart = async (e) => {
         unit: data.selectedUnit,
       },
     });
-    console.log("response", response);
+    
     const { data: responseData } = response;
     if (responseData.success) {
       toast.success(responseData.message);

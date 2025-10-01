@@ -404,6 +404,7 @@ export async function clearCartEndpoint(req, res) {
   }
 }
 
+
 const storeOrderInDatabase = async (session, lineItems) => {
   try {
     const userId = session.metadata.userId;
@@ -411,46 +412,42 @@ const storeOrderInDatabase = async (session, lineItems) => {
     const paymentId = session.payment_intent;
     const payment_status = session.payment_status;
 
-    const orderProduct = await getOrderProductItemsFromTempCart({
-      tempCartItems: lineItems.map((item) => ({
-        productId: item.price.product,
-        quantity: item.quantity,
-        amount: item.amount_total,
-      })),
+    const products = lineItems.data.map((item) => ({
+      productId: item.price.metadata.productId,
+      product_details: {
+        name: item.description,
+        image: "", // You may need to retrieve the image URL from another source
+      },
+      unitPrice: item.amount_total / 100 / item.quantity,
+      quantity: item.quantity,
+      totalPrice: item.amount_total / 100,
+    }));
+
+    const order = new OrderModel({
       userId,
-      addressId,
+      orderId: `ORD-${new mongoose.Types.ObjectId()}`,
+      products,
       paymentId,
       payment_status,
+      delivery_address: addressId,
+      subTotalAmt: session.amount_subtotal / 100,
+      totalAmt: session.amount_total / 100,
     });
 
-    if (orderProduct.length > 0) {
-      const orders = orderProduct[0].products.map((product) => ({
-        userId,
-        orderId: `ORD-${new mongoose.Types.ObjectId()}`,
-        productId: product.productId,
-        product_details: product.product_details,
-        paymentId,
-        payment_status,
-        delivery_address: addressId,
-        subTotalAmt: product.subTotalAmt,
-        totalAmt: orderProduct[0].totalAmt,
-      }));
+    await order.save();
 
-      await OrderModel.insertMany(orders);
-      console.log("Orders created");
-    } else {
-      console.log("No order products found.");
-    }
+    console.log("Order saved successfully");
   } catch (error) {
-    console.error("Error storing orders in database:", error);
+    console.error("Error storing order in database:", error);
   }
 };
 
 
 //http://localhost:8080/api/order/webhook
-
 export async function webhookStripe(request, response) {
+  console.log("Webhook Stripe function called");
   try {
+    const adminEmail = process.env.ADMIN_EMAIL;
     const event = request.body;
     console.log("Event type:", event.type);
     console.log("Event ID:", event.id);
@@ -458,7 +455,6 @@ export async function webhookStripe(request, response) {
     switch (event.type) {
       case "checkout.session.completed":
         const session = event.data.object;
-        console.log("Session ID:", session.id);
 
         // Ensure userId exists in metadata
         if (!session.metadata || !session.metadata.userId) {
@@ -489,49 +485,53 @@ export async function webhookStripe(request, response) {
           );
           await storeOrderInDatabase(session, lineItems.data);
 
-const address = await AddressModel.findById(session.metadata.addressId);
-if (!address) {
-  console.error("Address not found with ID:", session.metadata.addressId);
-  return response.json({ received: true, error: "Address not found" });
-}
+          let addressString;
+          const address = await AddressModel.findById(
+            session.metadata.addressId
+          );
+          if (!address) {
+            console.error(
+              "Address not found with ID:",
+              session.metadata.addressId
+            );
+            addressString = "No address provided";
+          } else {
+            addressString =
+              [
+                address.address_line,
+                address.city,
+                address.state,
+                address.pincode,
+              ]
+                .filter(Boolean)
+                .join(", ") || "No address provided";
+          }
 
-const addressString = [
-  address.address_line_1,
-  address.address_line_2,
-  address.city,
-  address.postcode,
-].filter(Boolean).join(', ') || 'No address provided';
-
-const orderDetails = {
-  orderId: session.id,
-  customerName: user.name,
-  customerEmail: session.customer_details.email,
-  address: session.shipping_details
-    ? `${session.shipping_details.address.line1}, ${session.shipping_details.address.city}, ${session.shipping_details.address.postal_code}`
-    : "No address provided",
-  products: lineItems.data.map((item) => ({
-    name: item.description,
-    quantity: item.quantity,
-    amount: (item.amount_total / 100).toFixed(2),
-  })),
-  paymentStatus: session.payment_status,
-  totalAmount: (session.amount_total / 100).toFixed(2),
-};
-
-
-
-
-const adminEmail = process.env.ADMIN_EMAIL;
-
-console.log("Sending new order email to admin:", adminEmail);
-console.log("Order details:", orderDetails);
-try {
-  await sendNewOrderEmailToAdmin(adminEmail, orderDetails);
-} catch (error) {
-  console.error("Error sending new order email to admin:", error);
-}
+          const orderDetails = {
+            orderId: session.id,
+            product_details:
+              lineItems.data.map((item) => item.description).join(", ") ||
+              "No product details",
+            totalAmt: session.amount_total
+              ? (session.amount_total / 100).toFixed(2)
+              : "0.00",
+            delivery_address: addressString || "No address provided",
+          };
 
 
+          // ...
+
+          try {
+            if (!adminEmail) {
+              console.error("Admin email not set in environment variables");
+              return response
+                .status(500)
+                .json({ message: "Admin email not configured" });
+            }
+            await sendNewOrderEmailToAdmin(adminEmail, orderDetails);
+          } catch (error) {
+            console.error("Error sending new order email to admin:", error);
+          }
 
 
 
@@ -544,7 +544,6 @@ try {
         } catch (error) {
           console.error("Error processing line items or clearing cart:", error);
         }
-
         break;
       default:
         console.log(`Unhandled event type ${event.type}`);
@@ -556,7 +555,6 @@ try {
     response.status(500).json({ message: "Internal Server Error" });
   }
 }
-
 
 
 // New function to process order products from temporary cart items
@@ -617,19 +615,26 @@ export async function getOrderDetailsController(request, response) {
     const orderList = await OrderModel.find({ userId: userId })
       .sort({ createdAt: -1 })
       .populate("delivery_address")
-      .populate("userId") // Populate user information
-      .then((orders) =>
-        orders.map((order) => ({
-          ...order.toObject(),
-          product_details: order.product_details,
-          user_name: order.userId.name, // Include user name
-          user_email: order.userId.email, // Include user email
-        }))
-      );
+      .populate("userId");
+
+    const formattedOrders = orderList.map((order) => ({
+      ...order.toObject(),
+      user_name: order.userId.name,
+      user_email: order.userId.email,
+      delivery_address_details: order.delivery_address,
+      products: order.products.map((product) => ({
+        productId: product.productId,
+        name: product.product_details.name,
+        image: product.product_details.image,
+        quantity: product.quantity,
+        unitPrice: product.unitPrice,
+        totalPrice: product.totalPrice,
+      })),
+    }));
 
     return response.json({
       message: "Order list",
-      data: orderList,
+      data: formattedOrders,
       error: false,
       success: true,
     });
@@ -642,38 +647,35 @@ export async function getOrderDetailsController(request, response) {
   }
 }
 
-
 export async function getAllOrdersController(request, response) {
   try {
     const orders = await OrderModel.find()
       .sort({ createdAt: -1 })
       .populate("delivery_address")
-      .populate("userId")
-      .then((orders) => orders.map((order) => ({
-        ...order.toObject(),
-        product_details: order.product_details,
-        user_name: order.userId?.name,
-        user_email: order.userId?.email,
-        delivery_address_details: order.delivery_address,
-      })));
+      .populate("userId");
 
-    if (!orders || orders.length === 0) {
-      return response.json({
-        message: "No orders found",
-        data: [],
-        error: false,
-        success: true,
-      });
-    }
+    const formattedOrders = orders.map((order) => ({
+      ...order.toObject(),
+      user_name: order.userId.name,
+      user_email: order.userId.email,
+      delivery_address_details: order.delivery_address,
+      products: order.products.map((product) => ({
+        productId: product.productId,
+        name: product.product_details.name,
+        image: product.product_details.image,
+        quantity: product.quantity,
+        unitPrice: product.unitPrice,
+        totalPrice: product.totalPrice,
+      })),
+    }));
 
     return response.json({
       message: "All orders",
-      data: orders,
+      data: formattedOrders,
       error: false,
       success: true,
     });
   } catch (error) {
-    console.error("Error fetching orders:", error);
     return response.status(500).json({
       message: error.message || error,
       error: true,
