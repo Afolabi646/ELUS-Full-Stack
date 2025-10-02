@@ -63,7 +63,6 @@ export async function paymentController(request, response) {
 
     // Retrieve the address document using the addressId
     const address = await AddressModel.findById(addressId);
-
     if (!address) {
       return response
         .status(400)
@@ -71,40 +70,21 @@ export async function paymentController(request, response) {
     }
 
     const user = await UserModel.findById(userId);
+    const totalAmountInCents = Math.round(totalAmt);
+    const deliveryFeeInCents = Math.round(7.99 * 100);
 
     const line_items = [
-      ...list_items.map((item) => {
-        return {
-          price_data: {
-            currency: "gbp",
-            product_data: {
-              name: item.productId.name,
-              images: item.productId.image,
-              metadata: {
-                productId: item.productId._id,
-              },
-            },
-            unit_amount: Math.round(item.productId.price * 100),
-          },
-          adjustable_quantity: {
-            enabled: true,
-            minimum: 1,
-          },
-          quantity: item.quantity,
-        };
-      }),
       {
         price_data: {
           currency: "gbp",
           product_data: {
-            name: "Delivery Fee",
+            name: "Order Total",
           },
-          unit_amount: Math.round(7.99 * 100),
+          unit_amount: Math.round(totalAmt),
         },
         quantity: 1,
       },
     ];
-
     const params = {
       submit_type: "pay",
       mode: "payment",
@@ -115,7 +95,7 @@ export async function paymentController(request, response) {
         addressId: addressId,
       },
       shipping_address_collection: {
-        allowed_countries: ["GB"], // Adjust this to your needs
+        allowed_countries: ["GB"],
       },
       client_reference_id: userId.toString(),
       line_items: line_items,
@@ -123,10 +103,7 @@ export async function paymentController(request, response) {
       cancel_url: `${process.env.FRONTEND_URL}/cancel`,
     };
 
-
-
     const session = await stripe.checkout.sessions.create(params);
-
     const currentTime = Math.floor(Date.now() / 1000);
     if (session.expires_at < currentTime) {
       return response.status(400).json({ message: "Session has expired" });
@@ -141,7 +118,6 @@ export async function paymentController(request, response) {
     });
   }
 }
-
 // const getOrderProductItems = async ({
 //   lineItems,
 //   userId,
@@ -447,114 +423,126 @@ const storeOrderInDatabase = async (session, lineItems) => {
 export async function webhookStripe(request, response) {
   console.log("Webhook Stripe function called");
   try {
-    const adminEmail = process.env.ADMIN_EMAIL;
     const event = request.body;
     console.log("Event type:", event.type);
     console.log("Event ID:", event.id);
 
+    // Return a 200 response immediately
+    response.json({ received: true });
+
+    // Process the event asynchronously
+    processEvent(event);
+  } catch (error) {
+    console.error("Error processing webhook event:", error);
+  }
+}
+
+async function processEvent(event) {
+  console.log(`Processing event: ${event.type}`);
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL;
     switch (event.type) {
       case "checkout.session.completed":
         const session = event.data.object;
-
         // Ensure userId exists in metadata
         if (!session.metadata || !session.metadata.userId) {
           console.error("Missing userId in session metadata");
-          return response.json({ received: true, error: "Missing userId" });
+          return;
         }
 
         // Validate userId and get user details
         const userIdString = session.metadata.userId.toString();
         if (!mongoose.Types.ObjectId.isValid(userIdString)) {
           console.error("UserId is not a valid ObjectId:", userIdString);
-          return response.json({
-            received: true,
-            error: "Invalid userId format",
-          });
+          return;
         }
 
         const userId = new mongoose.Types.ObjectId(userIdString);
-        const user = await UserModel.findById(userId);
-        if (!user) {
-          console.error("User not found with ID:", userIdString);
-          return response.json({ received: true, error: "User not found" });
-        }
-
         try {
-          const lineItems = await stripe.checkout.sessions.listLineItems(
-            session.id
-          );
-          await storeOrderInDatabase(session, lineItems.data);
-
-          let addressString;
-          const address = await AddressModel.findById(
-            session.metadata.addressId
-          );
-          if (!address) {
-            console.error(
-              "Address not found with ID:",
-              session.metadata.addressId
-            );
-            addressString = "No address provided";
-          } else {
-            addressString =
-              [
-                address.address_line,
-                address.city,
-                address.state,
-                address.pincode,
-              ]
-                .filter(Boolean)
-                .join(", ") || "No address provided";
+          const user = await UserModel.findById(userId);
+          if (!user) {
+            console.error("User not found with ID:", userIdString);
+            return;
           }
-
-          const orderDetails = {
-            orderId: session.id,
-            product_details:
-              lineItems.data.map((item) => item.description).join(", ") ||
-              "No product details",
-            totalAmt: session.amount_total
-              ? (session.amount_total / 100).toFixed(2)
-              : "0.00",
-            delivery_address: addressString || "No address provided",
-          };
-
-
-          // ...
 
           try {
-            if (!adminEmail) {
-              console.error("Admin email not set in environment variables");
-              return response
-                .status(500)
-                .json({ message: "Admin email not configured" });
+            const lineItems = await stripe.checkout.sessions.listLineItems(
+              session.id
+            );
+            await storeOrderInDatabase(session, lineItems.data);
+
+            let addressString;
+            try {
+              const address = await AddressModel.findById(
+                session.metadata.addressId
+              );
+              if (!address) {
+                console.error(
+                  "Address not found with ID:",
+                  session.metadata.addressId
+                );
+                addressString = "No address provided";
+              } else {
+                addressString =
+                  [
+                    address.address_line,
+                    address.city,
+                    address.state,
+                    address.pincode,
+                  ]
+                    .filter(Boolean)
+                    .join(", ") || "No address provided";
+              }
+            } catch (error) {
+              console.error("Error fetching address:", error);
+              addressString = "No address provided";
             }
-            await sendNewOrderEmailToAdmin(adminEmail, orderDetails);
+
+            const orderDetails = {
+              orderId: session.id,
+              product_details:
+                lineItems.data.map((item) => item.description).join(", ") ||
+                "No product details",
+              totalAmt: session.amount_total
+                ? (session.amount_total / 100).toFixed(2)
+                : "0.00",
+              delivery_address: addressString || "No address provided",
+            };
+
+            try {
+              if (!adminEmail) {
+                console.error("Admin email not set in environment variables");
+                return;
+              }
+              await sendNewOrderEmailToAdmin(adminEmail, orderDetails);
+            } catch (error) {
+              console.error("Error sending new order email to admin:", error);
+            }
+
+            try {
+              await CartProductModel.deleteMany({ userId });
+              await UserModel.findByIdAndUpdate(userId, {
+                $set: { shopping_cart: [] },
+              });
+              console.log("Cart cleared");
+            } catch (error) {
+              console.error("Error clearing cart:", error);
+            }
           } catch (error) {
-            console.error("Error sending new order email to admin:", error);
+            console.error("Error processing line items:", error);
           }
-
-
-
-          // Clear cart
-          await CartProductModel.deleteMany({ userId });
-          await UserModel.findByIdAndUpdate(userId, {
-            $set: { shopping_cart: [] },
-          });
-          console.log("Cart cleared");
         } catch (error) {
-          console.error("Error processing line items or clearing cart:", error);
+          console.error("Error fetching user:", error);
         }
         break;
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
-
-    response.json({ received: true });
   } catch (error) {
-    console.error("Error processing webhook event:", error);
-    response.status(500).json({ message: "Internal Server Error" });
+    console.error("Error processing event:", error);
   }
 }
+
 
 
 // New function to process order products from temporary cart items

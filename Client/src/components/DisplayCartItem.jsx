@@ -55,16 +55,20 @@ const DisplayCartItem = ({ close }) => {
 
   const grandTotal = totalPrice + 7.99;
 
-  const redirectToCheckoutPage = () => {
-    if (user?._id) {
-      navigate("/checkout");
-      if (close) {
-        close();
-      }
-      return;
+
+const redirectToCheckoutPage = () => {
+  if (user?._id) {
+    console.log("Grand Total:", grandTotal);
+    navigate("/checkout", { state: { grandTotal, totalPrice } });
+    if (close) {
+      close();
     }
-    toast("please login");
-  };
+    return;
+  }
+  toast("please login");
+};
+
+
 
   const handleUnitChange = (itemId, unit) => {
     setSelectedUnit((prevSelectedUnit) => ({
